@@ -75,8 +75,8 @@ const Schedule: React.FC = () => {
     const [hours, minutes] = time.split(':').map(Number);
 
     const getActionLabel = (act: string) => {
-      if (act === 'scenario1') return 'シナリオ1';
-      if (act === 'scenario2') return 'シナリオ2';
+      if (act === 'scenario1') return 'Off';
+      if (act === 'scenario2') return 'On';
       if (act === 'lock') return 'Lock';
       if (act === 'unlock') return 'Unlock';
       return act;
@@ -114,7 +114,7 @@ const Schedule: React.FC = () => {
 
   const formatDays = (daysOfWeek: number[] | null) => {
     if (!daysOfWeek || daysOfWeek.length === 0 || daysOfWeek.length === 7) {
-      return '毎日';
+      return 'Every day';
     }
     return daysOfWeek.map(d => DAYS.find(day => day.value === d)?.label).join(' ');
   };
@@ -167,8 +167,8 @@ const Schedule: React.FC = () => {
                 >
                   {selectedDevice && isBotType(selectedDevice.device_type) ? (
                     <>
-                      <option value="scenario1">シナリオ1 (消灯)</option>
-                      <option value="scenario2">シナリオ2 (点灯)</option>
+                      <option value="scenario1">Scenario 1 (Off)</option>
+                      <option value="scenario2">Scenario 2 (On)</option>
                     </>
                   ) : selectedDevice && isLockType(selectedDevice.device_type) ? (
                     <>
@@ -176,7 +176,7 @@ const Schedule: React.FC = () => {
                       <option value="unlock">Unlock</option>
                     </>
                   ) : (
-                    <option value="" disabled>操作不可</option>
+                    <option value="" disabled>View only</option>
                   )}
                 </select>
               </div>
@@ -233,7 +233,7 @@ const Schedule: React.FC = () => {
                 ))}
               </div>
               <p className="text-[10px] text-gray-400 mt-1">
-                {selectedDays.length === 0 ? '未選択 = 毎日' : formatDays(selectedDays)}
+                {selectedDays.length === 0 ? 'No selection = Every day' : formatDays(selectedDays)}
               </p>
             </div>
 
