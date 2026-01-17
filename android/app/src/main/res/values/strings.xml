@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sesame Controller</string>
+    <string name="title_activity_main">Sesame Controller</string>
+    <string name="package_name">com.sesame.controller</string>
+    <string name="custom_url_scheme">com.sesame.controller</string>
+</resources>

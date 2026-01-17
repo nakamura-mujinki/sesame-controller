@@ -1,0 +1,5 @@
+{
+  "name": "Sesame Controller",
+  "description": "Smart home controller for Sesame Bot 2 and Sesame 5 with scheduling capabilities.",
+  "requestFramePermissions": []
+}

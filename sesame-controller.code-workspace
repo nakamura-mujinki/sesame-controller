@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"sesame-controller.devServer": {
+			"port": 1100,
+			"host": "localhost",
+			"url": "http://localhost:1100"
+		}
+	}
+}
