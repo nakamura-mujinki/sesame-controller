@@ -112,13 +112,13 @@ const Schedule: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      <header className="px-6 py-6 bg-surface border-b border-border shrink-0">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <header className="px-6 py-4 bg-surface border-b border-border shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-primary">Timer</h1>
         <p className="text-xs text-gray-500 mt-0.5">Schedule automated tasks (UTC+9)</p>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
+      <main className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar scroll-container momentum-scroll">
         {/* Add Task Form */}
         <div className="bg-surface p-5 rounded-lg border border-border shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">

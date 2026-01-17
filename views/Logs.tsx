@@ -33,13 +33,13 @@ const Logs: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      <header className="px-6 py-6 bg-surface border-b border-border shrink-0">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <header className="px-6 py-4 bg-surface border-b border-border shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-primary">Logs</h1>
         <p className="text-xs text-gray-500 mt-0.5">Recent activity</p>
       </header>
 
-      <main className="flex-1 overflow-y-auto no-scrollbar">
+      <main className="flex-1 overflow-y-auto no-scrollbar scroll-container momentum-scroll">
         {logs.length === 0 ? (
            <div className="flex flex-col items-center justify-center h-full text-gray-400">
              <IconList className="w-10 h-10 mb-2 opacity-20" />

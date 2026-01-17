@@ -139,13 +139,13 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      <header className="px-6 py-6 bg-surface border-b border-border shrink-0">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <header className="px-6 py-4 bg-surface border-b border-border shrink-0">
         <h1 className="text-xl font-semibold tracking-tight text-primary">Settings</h1>
         <p className="text-xs text-gray-500 mt-0.5">Manage devices</p>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
+      <main className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar scroll-container momentum-scroll">
         {/* Visible Device List */}
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">

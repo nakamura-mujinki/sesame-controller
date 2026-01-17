@@ -9,7 +9,7 @@ const NavBar: React.FC = () => {
     }`;
 
   return (
-    <nav className="h-[70px] bg-surface border-t border-border flex items-center justify-around px-2 pb-safe">
+    <nav className="h-[60px] bg-surface border-t border-border flex items-center justify-around px-2 shrink-0">
       <NavLink to="/" className={getLinkClass}>
         <IconHome className="w-6 h-6" />
         <span className="text-[10px] font-medium uppercase tracking-wider">Home</span>

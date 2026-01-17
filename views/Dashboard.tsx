@@ -21,8 +21,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      <header className="px-6 py-6 bg-surface border-b border-border flex justify-between items-center shrink-0">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
+      <header className="px-6 py-4 bg-surface border-b border-border flex justify-between items-center shrink-0">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-primary">Control</h1>
           <p className="text-xs text-gray-500 mt-0.5">Welcome home</p>
@@ -35,7 +35,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar scroll-container momentum-scroll">
         {loading ? (
           <div className="text-center py-10 text-gray-400 text-sm">Loading devices...</div>
         ) : devices.length === 0 ? (

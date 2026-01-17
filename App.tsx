@@ -66,8 +66,8 @@ const App: React.FC = () => {
 
   return (
     <HashRouter>
-      <div className="flex flex-col h-full w-full max-w-md mx-auto bg-background shadow-2xl overflow-hidden relative border-x border-border">
-        <div className="flex-1 overflow-hidden relative min-h-0">
+      <div className="app-container bg-background shadow-2xl border-x border-border">
+        <div className="main-content">
           <Routes>
             <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
             <Route path="/schedule" element={<Schedule />} />
@@ -76,7 +76,9 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
-        <NavBar />
+        <div className="bottom-nav">
+          <NavBar />
+        </div>
       </div>
     </HashRouter>
   );
