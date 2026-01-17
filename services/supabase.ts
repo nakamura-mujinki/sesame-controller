@@ -3,7 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://coawkrogiuekmjsnrtln.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvYXdrcm9naXVla21qc25ydGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NTA3OTksImV4cCI6MjA4NDIyNjc5OX0.retIjMygGdJtXzt8OxZzv93qZBC2rVDG-WwAIK02X0Y';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storageKey: 'sesame-control-auth',
+  },
+});
 
 // Device types (limited to supported devices)
 export type DeviceType = 'sesame5' | 'sesame5_pro' | 'bot2';

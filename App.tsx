@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import { supabase } from './services/supabase';
-import { getCurrentUser as getSesameUser, signOut as sesameSignOut } from './services/sesameAuth';
 import LoginForm from './components/LoginForm';
 import NavBar from './components/NavBar';
 import Dashboard from './views/Dashboard';
@@ -12,25 +11,18 @@ import Settings from './views/Settings';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [sesameEmail, setSesameEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Check SESAME session first
-      const email = await getSesameUser();
-      setSesameEmail(email);
-
-      // Also check Supabase session
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-
       setLoading(false);
     };
 
     checkAuth();
 
-    // Listen for Supabase auth changes
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -38,14 +30,11 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLoginSuccess = async (email: string) => {
-    setSesameEmail(email);
-    // Supabase session will be updated via onAuthStateChange
+  const handleLoginSuccess = async (_email: string) => {
+    // User state will be updated via onAuthStateChange
   };
 
   const handleLogout = async () => {
-    sesameSignOut();
-    setSesameEmail(null);
     await supabase.auth.signOut();
   };
 
@@ -57,10 +46,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Require both SESAME auth and Supabase session (for data access)
-  // If SESAME is authenticated but Supabase isn't, we still show the app
-  // (Supabase connection might have failed but SESAME auth succeeded)
-  if (!sesameEmail && !user) {
+  if (!user) {
     return <LoginForm onLoginSuccess={handleLoginSuccess} />;
   }
 
