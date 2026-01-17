@@ -1,29 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { DbDevice, DeviceType, DEVICE_IMAGES, DEVICE_NAMES } from '../services/supabase';
-import { getAllDevices, addDevice, toggleDeviceVisibility } from '../services/deviceService';
+import { getAllDevices, addDevice, toggleDeviceVisibility, updateScenarioNames } from '../services/deviceService';
 import { getUserSettings, saveApiKey } from '../services/userSettingsService';
 import Button from '../components/Button';
 import { IconPlus } from '../components/Icons';
 
 // All available device types for the selector
-const DEVICE_TYPE_OPTIONS: DeviceType[] = [
-  'sesame5',
-  'sesame5_pro',
-  'sesame_face',
-  'sesame_face_pro',
-  'sesame_face_ai',
-  'sesame_face_pro_ai',
-  'sesame_touch',
-  'sesame_touch_pro',
-  'remote',
-  'remote_nano',
-  'hub3',
-  'open_sensor',
-  'bot2',
-  'cycle2',
-  'bot',
-  'lock',
-];
+const DEVICE_TYPE_OPTIONS: DeviceType[] = ['sesame5', 'sesame5_pro', 'bot2'];
 
 // Eye icon for visibility toggle
 const IconEye = ({ className = "w-6 h-6" }: { className?: string }) => (
@@ -57,6 +40,12 @@ const Settings: React.FC = () => {
   const [hasApiKey, setHasApiKey] = useState(false);
   const [savingApiKey, setSavingApiKey] = useState(false);
   const [apiKeyMessage, setApiKeyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Scenario editing state
+  const [editingScenarioDevice, setEditingScenarioDevice] = useState<string | null>(null);
+  const [scenario1Name, setScenario1Name] = useState('');
+  const [scenario2Name, setScenario2Name] = useState('');
+  const [savingScenario, setSavingScenario] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -126,6 +115,33 @@ const Settings: React.FC = () => {
     }
   };
 
+  const startEditingScenario = (device: DbDevice) => {
+    setEditingScenarioDevice(device.id);
+    setScenario1Name(device.scenario1_name || 'Off');
+    setScenario2Name(device.scenario2_name || 'On');
+  };
+
+  const cancelEditingScenario = () => {
+    setEditingScenarioDevice(null);
+    setScenario1Name('');
+    setScenario2Name('');
+  };
+
+  const handleSaveScenarioNames = async (deviceId: string) => {
+    setSavingScenario(true);
+    const success = await updateScenarioNames(deviceId, scenario1Name, scenario2Name);
+    if (success) {
+      setDevices(prev =>
+        prev.map(d => d.id === deviceId
+          ? { ...d, scenario1_name: scenario1Name, scenario2_name: scenario2Name }
+          : d
+        )
+      );
+      setEditingScenarioDevice(null);
+    }
+    setSavingScenario(false);
+  };
+
   // Separate visible and hidden devices
   const visibleDevices = devices.filter(d => d.visible);
   const hiddenDevices = devices.filter(d => !d.visible);
@@ -165,28 +181,86 @@ const Settings: React.FC = () => {
             </div>
           ) : (
             visibleDevices.map(device => (
-              <div key={device.id} className="flex items-center justify-between p-4 bg-surface rounded-lg border border-border shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-border">
-                    <img
-                      src={DEVICE_IMAGES[device.device_type] || DEVICE_IMAGES.sesame5}
-                      alt={DEVICE_NAMES[device.device_type] || device.device_type}
-                      className="w-full h-full object-cover"
-                    />
+              <div key={device.id} className="p-4 bg-surface rounded-lg border border-border shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-border">
+                      <img
+                        src={DEVICE_IMAGES[device.device_type] || DEVICE_IMAGES.sesame5}
+                        alt={DEVICE_NAMES[device.device_type] || device.device_type}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-primary">{device.name}</span>
+                      <span className="text-[10px] text-gray-400">{DEVICE_NAMES[device.device_type] || device.device_type}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">{device.device_uuid.slice(0, 8)}...</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-primary">{device.name}</span>
-                    <span className="text-[10px] text-gray-400">{DEVICE_NAMES[device.device_type] || device.device_type}</span>
-                    <span className="text-[10px] text-gray-400 font-mono">{device.device_uuid.slice(0, 8)}...</span>
-                  </div>
+                  <button
+                    onClick={() => handleToggleVisibility(device)}
+                    className="text-primary hover:text-gray-600 transition-colors p-2"
+                    title="Hide device"
+                  >
+                    <IconEye className="w-5 h-5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleToggleVisibility(device)}
-                  className="text-primary hover:text-gray-600 transition-colors p-2"
-                  title="Hide device"
-                >
-                  <IconEye className="w-5 h-5" />
-                </button>
+
+                {/* Scenario name editing for bot2 */}
+                {device.device_type === 'bot2' && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    {editingScenarioDevice === device.id ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] text-gray-400 w-20">Scenario 1:</label>
+                          <input
+                            type="text"
+                            value={scenario1Name}
+                            onChange={(e) => setScenario1Name(e.target.value)}
+                            className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] text-gray-400 w-20">Scenario 2:</label>
+                          <input
+                            type="text"
+                            value={scenario2Name}
+                            onChange={(e) => setScenario2Name(e.target.value)}
+                            className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={cancelEditingScenario}
+                            className="text-[10px] text-gray-500 hover:text-gray-700"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleSaveScenarioNames(device.id)}
+                            disabled={savingScenario}
+                            className="text-[10px] text-primary hover:underline"
+                          >
+                            {savingScenario ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] text-gray-500">
+                          <span className="text-gray-400">Scenarios:</span>{' '}
+                          {device.scenario1_name || 'Off'} / {device.scenario2_name || 'On'}
+                        </div>
+                        <button
+                          onClick={() => startEditingScenario(device)}
+                          className="text-[10px] text-primary hover:underline"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}

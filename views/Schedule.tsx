@@ -7,12 +7,12 @@ import { IconClock, IconTrash, IconPlus } from '../components/Icons';
 
 // Helper to determine if device is a bot-type (scenario control)
 const isBotType = (type: DeviceType): boolean => {
-  return ['bot', 'bot2', 'remote', 'remote_nano'].includes(type);
+  return type === 'bot2';
 };
 
 // Helper to determine if device is a lock-type (lock/unlock control)
 const isLockType = (type: DeviceType): boolean => {
-  return ['lock', 'sesame5', 'sesame5_pro', 'cycle2'].includes(type);
+  return type === 'sesame5' || type === 'sesame5_pro';
 };
 
 const DAYS = [
@@ -75,8 +75,8 @@ const Schedule: React.FC = () => {
     const [hours, minutes] = time.split(':').map(Number);
 
     const getActionLabel = (act: string) => {
-      if (act === 'scenario1') return 'Off';
-      if (act === 'scenario2') return 'On';
+      if (act === 'scenario1') return selectedDevice.scenario1_name || 'Off';
+      if (act === 'scenario2') return selectedDevice.scenario2_name || 'On';
       if (act === 'lock') return 'Lock';
       if (act === 'unlock') return 'Unlock';
       return act;
@@ -167,8 +167,8 @@ const Schedule: React.FC = () => {
                 >
                   {selectedDevice && isBotType(selectedDevice.device_type) ? (
                     <>
-                      <option value="scenario1">Scenario 1 (Off)</option>
-                      <option value="scenario2">Scenario 2 (On)</option>
+                      <option value="scenario1">Scenario 1 ({selectedDevice.scenario1_name || 'Off'})</option>
+                      <option value="scenario2">Scenario 2 ({selectedDevice.scenario2_name || 'On'})</option>
                     </>
                   ) : selectedDevice && isLockType(selectedDevice.device_type) ? (
                     <>

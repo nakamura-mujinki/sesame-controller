@@ -162,8 +162,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // コマンドコード決定
-    // Bot types: bot, bot2, remote, remote_nano
-    const isBotType = ["bot", "bot2", "remote", "remote_nano"].includes(device.device_type);
+    const isBotType = device.device_type === "bot2";
 
     let cmd: number;
     if (isBotType) {

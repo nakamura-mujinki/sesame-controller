@@ -10,12 +10,12 @@ interface DeviceCardProps {
 
 // Helper to determine if device is a bot-type (button control)
 const isBotType = (type: DeviceType): boolean => {
-  return ['bot', 'bot2', 'remote', 'remote_nano'].includes(type);
+  return type === 'bot2';
 };
 
 // Helper to determine if device is a lock-type (lock/unlock control)
 const isLockType = (type: DeviceType): boolean => {
-  return ['lock', 'sesame5', 'sesame5_pro', 'cycle2'].includes(type);
+  return type === 'sesame5' || type === 'sesame5_pro';
 };
 
 const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
@@ -39,6 +39,10 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
   const deviceTypeName = DEVICE_NAMES[device.device_type] || device.device_type;
   const showBotControls = isBotType(device.device_type);
   const showLockControls = isLockType(device.device_type);
+
+  // Use custom scenario names if available, fallback to defaults
+  const scenario1Label = device.scenario1_name || 'Off';
+  const scenario2Label = device.scenario2_name || 'On';
 
   return (
     <div className="bg-surface rounded-lg p-5 border border-border shadow-sm flex flex-col gap-5">
@@ -72,21 +76,21 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
           <>
             <Button
               variant="outline"
-              onClick={() => handleCommand('scenario1', 'Off')}
+              onClick={() => handleCommand('scenario1', scenario1Label)}
               isLoading={loadingAction === 'scenario1'}
               className="flex items-center gap-2"
             >
               <IconMoon className="w-4 h-4" />
-              <span>Off</span>
+              <span>{scenario1Label}</span>
             </Button>
             <Button
               variant="primary"
-              onClick={() => handleCommand('scenario2', 'On')}
+              onClick={() => handleCommand('scenario2', scenario2Label)}
               isLoading={loadingAction === 'scenario2'}
               className="flex items-center gap-2"
             >
               <IconLightBulb className="w-4 h-4" />
-              <span>On</span>
+              <span>{scenario2Label}</span>
             </Button>
           </>
         ) : showLockControls ? (

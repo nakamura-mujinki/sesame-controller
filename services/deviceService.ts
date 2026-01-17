@@ -1,4 +1,4 @@
-import { supabase, DbDevice } from './supabase';
+import { supabase, DbDevice, DeviceType } from './supabase';
 
 /**
  * Get all visible devices for the current user
@@ -48,7 +48,7 @@ export const getAllDevices = async (): Promise<DbDevice[]> => {
  */
 export const addDevice = async (device: {
   name: string;
-  device_type: 'bot' | 'lock';
+  device_type: DeviceType;
   device_uuid: string;
   secret_key: string;
 }): Promise<DbDevice | null> => {
@@ -118,6 +118,27 @@ export const deleteDevice = async (id: string): Promise<boolean> => {
 
   if (error) {
     console.error('Failed to delete device:', error);
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Update scenario names for a bot2 device
+ */
+export const updateScenarioNames = async (
+  id: string,
+  scenario1_name: string,
+  scenario2_name: string
+): Promise<boolean> => {
+  const { error } = await supabase
+    .from('devices')
+    .update({ scenario1_name, scenario2_name })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Failed to update scenario names:', error);
     return false;
   }
 
