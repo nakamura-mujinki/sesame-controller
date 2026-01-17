@@ -162,12 +162,17 @@ Deno.serve(async (req: Request) => {
     }
 
     // コマンドコード決定
+    // Bot types: bot, bot2, remote, remote_nano
+    const isBotType = ["bot", "bot2", "remote", "remote_nano"].includes(device.device_type);
+
     let cmd: number;
-    if (device.device_type === "bot") {
-      if (action === "scenario1" || action === "off") cmd = 2;
-      else if (action === "scenario2" || action === "on") cmd = 3;
-      else cmd = 1;
+    if (isBotType) {
+      // シナリオ1 = cmd 2, シナリオ2 = cmd 3
+      if (action === "scenario1") cmd = 2;
+      else if (action === "scenario2") cmd = 3;
+      else cmd = 1; // click
     } else {
+      // Lock types
       if (action === "lock") cmd = 82;
       else if (action === "unlock") cmd = 83;
       else cmd = 82;

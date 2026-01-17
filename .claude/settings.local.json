@@ -23,7 +23,9 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git config:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git rebase -i --root --exec \"git commit --amend --author=''Kenta Nakamura <kenta.nakamura@mujinki.com>'' --no-edit\")",
+      "Bash(git stash:*)"
     ]
   }
 }

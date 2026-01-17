@@ -1,4 +1,4 @@
-import { supabase, DbSchedule, DbDevice } from './supabase';
+import { supabase, DbSchedule, DeviceType } from './supabase';
 
 export const getSchedules = async (): Promise<DbSchedule[]> => {
   const { data, error } = await supabase
@@ -17,7 +17,7 @@ export const getSchedules = async (): Promise<DbSchedule[]> => {
 
 export const createSchedule = async (schedule: {
   name: string;
-  device_type: 'bot' | 'lock';
+  device_type: DeviceType;
   device_uuid: string;
   action: string;
   time_hour: number;

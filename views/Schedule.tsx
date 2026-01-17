@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { DbDevice, DbSchedule } from '../services/supabase';
+import { DbDevice, DbSchedule, DeviceType } from '../services/supabase';
 import { getDevices } from '../services/sesameService';
 import { getSchedules, createSchedule, deleteSchedule } from '../services/scheduleService';
 import Button from '../components/Button';
 import { IconClock, IconTrash, IconPlus } from '../components/Icons';
+
+// Helper to determine if device is a bot-type (scenario control)
+const isBotType = (type: DeviceType): boolean => {
+  return ['bot', 'bot2', 'remote', 'remote_nano'].includes(type);
+};
+
+// Helper to determine if device is a lock-type (lock/unlock control)
+const isLockType = (type: DeviceType): boolean => {
+  return ['lock', 'sesame5', 'sesame5_pro', 'cycle2'].includes(type);
+};
 
 const DAYS = [
   { value: 0, label: '日' },
@@ -32,7 +42,7 @@ const Schedule: React.FC = () => {
       setSchedules(scheds);
       if (devs.length > 0) {
         setDeviceUuid(devs[0].device_uuid);
-        setAction(devs[0].device_type === 'bot' ? 'on' : 'lock');
+        setAction(isBotType(devs[0].device_type) ? 'scenario1' : 'lock');
       }
       setLoading(false);
     };
@@ -64,8 +74,14 @@ const Schedule: React.FC = () => {
     setSubmitting(true);
     const [hours, minutes] = time.split(':').map(Number);
 
-    const actionLabel = action === 'on' ? 'Turn On' : action === 'off' ? 'Turn Off' : action === 'lock' ? 'Lock' : 'Unlock';
-    const name = `${selectedDevice.name.split('(')[0].trim()} -> ${actionLabel}`;
+    const getActionLabel = (act: string) => {
+      if (act === 'scenario1') return 'シナリオ1';
+      if (act === 'scenario2') return 'シナリオ2';
+      if (act === 'lock') return 'Lock';
+      if (act === 'unlock') return 'Unlock';
+      return act;
+    };
+    const name = `${selectedDevice.name.split('(')[0].trim()} -> ${getActionLabel(action)}`;
 
     const newSchedule = await createSchedule({
       name,
@@ -130,7 +146,7 @@ const Schedule: React.FC = () => {
                   setDeviceUuid(e.target.value);
                   const dev = devices.find(d => d.device_uuid === e.target.value);
                   if (dev) {
-                    setAction(dev.device_type === 'bot' ? 'on' : 'lock');
+                    setAction(isBotType(dev.device_type) ? 'scenario1' : 'lock');
                   }
                 }}
                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -149,16 +165,18 @@ const Schedule: React.FC = () => {
                   onChange={(e) => setAction(e.target.value)}
                   className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                 >
-                  {selectedDevice?.device_type === 'bot' ? (
+                  {selectedDevice && isBotType(selectedDevice.device_type) ? (
                     <>
-                      <option value="on">On (Scn 2)</option>
-                      <option value="off">Off (Scn 1)</option>
+                      <option value="scenario1">シナリオ1 (消灯)</option>
+                      <option value="scenario2">シナリオ2 (点灯)</option>
                     </>
-                  ) : (
+                  ) : selectedDevice && isLockType(selectedDevice.device_type) ? (
                     <>
                       <option value="lock">Lock</option>
                       <option value="unlock">Unlock</option>
                     </>
+                  ) : (
+                    <option value="" disabled>操作不可</option>
                   )}
                 </select>
               </div>

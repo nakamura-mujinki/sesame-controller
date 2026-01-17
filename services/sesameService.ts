@@ -2,7 +2,7 @@ import { supabase, DbDevice } from './supabase';
 
 const EDGE_FUNCTION_URL = 'https://coawkrogiuekmjsnrtln.supabase.co/functions/v1/send-command';
 
-export type ActionType = 'on' | 'off' | 'lock' | 'unlock';
+export type ActionType = 'scenario1' | 'scenario2' | 'lock' | 'unlock';
 
 export const sendCommand = async (
   deviceUuid: string,

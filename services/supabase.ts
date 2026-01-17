@@ -80,7 +80,7 @@ export interface DbSchedule {
   id: string;
   user_id: string;
   name: string;
-  device_type: 'bot' | 'lock';
+  device_type: DeviceType;
   device_uuid: string;
   action: string;
   time_hour: number;

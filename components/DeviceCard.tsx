@@ -72,21 +72,21 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
           <>
             <Button
               variant="outline"
-              onClick={() => handleCommand('off', 'Off')}
-              isLoading={loadingAction === 'off'}
+              onClick={() => handleCommand('scenario1', 'シナリオ1')}
+              isLoading={loadingAction === 'scenario1'}
               className="flex items-center gap-2"
             >
               <IconMoon className="w-4 h-4" />
-              <span>OFF</span>
+              <span>消灯</span>
             </Button>
             <Button
               variant="primary"
-              onClick={() => handleCommand('on', 'On')}
-              isLoading={loadingAction === 'on'}
+              onClick={() => handleCommand('scenario2', 'シナリオ2')}
+              isLoading={loadingAction === 'scenario2'}
               className="flex items-center gap-2"
             >
               <IconLightBulb className="w-4 h-4" />
-              <span>ON</span>
+              <span>点灯</span>
             </Button>
           </>
         ) : showLockControls ? (
