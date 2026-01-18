@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { DbDevice, DbSchedule, DeviceType } from '../services/supabase';
 import { getDevices } from '../services/sesameService';
-import { getSchedules, createSchedule, deleteSchedule } from '../services/scheduleService';
+import { getSchedules, createSchedule, deleteSchedule, updateSchedule } from '../services/scheduleService';
 import Button from '../components/Button';
-import { IconClock, IconTrash, IconPlus } from '../components/Icons';
+import { IconClock, IconTrash, IconPlus, IconPencil } from '../components/Icons';
 
 // Helper to determine if device is a bot-type (scenario control)
 const isBotType = (type: DeviceType): boolean => {
@@ -25,15 +25,29 @@ const DAYS = [
   { value: 6, label: '土' },
 ];
 
+// Hour options (0-23)
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
+  value: i,
+  label: i.toString().padStart(2, '0'),
+}));
+
+// Minute options (5-minute intervals)
+const MINUTE_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: i * 5,
+  label: (i * 5).toString().padStart(2, '0'),
+}));
+
 const Schedule: React.FC = () => {
   const [devices, setDevices] = useState<DbDevice[]>([]);
   const [schedules, setSchedules] = useState<DbSchedule[]>([]);
   const [deviceUuid, setDeviceUuid] = useState('');
   const [action, setAction] = useState('on');
-  const [time, setTime] = useState('');
+  const [hour, setHour] = useState<number | ''>('');
+  const [minute, setMinute] = useState<number | ''>('');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<DbSchedule | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +56,7 @@ const Schedule: React.FC = () => {
       setSchedules(scheds);
       if (devs.length > 0) {
         setDeviceUuid(devs[0].device_uuid);
-        setAction(isBotType(devs[0].device_type) ? 'scenario1' : 'lock');
+        setAction(isBotType(devs[0].device_type) ? 'scenario0' : 'lock');
       }
       setLoading(false);
     };
@@ -69,36 +83,67 @@ const Schedule: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!time || !selectedDevice) return;
+    if (hour === '' || minute === '' || !selectedDevice) return;
 
     setSubmitting(true);
-    const [hours, minutes] = time.split(':').map(Number);
 
     const getActionLabel = (act: string) => {
-      if (act === 'scenario1') return selectedDevice.scenario1_name || 'Off';
-      if (act === 'scenario2') return selectedDevice.scenario2_name || 'On';
+      if (act === 'scenario0') return selectedDevice.scenario0_name || 'Off';
+      if (act === 'scenario1') return selectedDevice.scenario1_name || 'On';
       if (act === 'lock') return 'Lock';
       if (act === 'unlock') return 'Unlock';
       return act;
     };
     const name = `${selectedDevice.name.split('(')[0].trim()} -> ${getActionLabel(action)}`;
 
-    const newSchedule = await createSchedule({
+    const scheduleData = {
       name,
       device_type: selectedDevice.device_type,
       device_uuid: deviceUuid,
       action,
-      time_hour: hours,
-      time_minute: minutes,
+      time_hour: hour,
+      time_minute: minute,
       days_of_week: selectedDays.length === 0 || selectedDays.length === 7 ? null : selectedDays,
-    });
+    };
 
-    if (newSchedule) {
-      setSchedules(prev => [...prev, newSchedule]);
+    if (editingSchedule) {
+      // Update existing schedule
+      const updated = await updateSchedule(editingSchedule.id, scheduleData);
+      if (updated) {
+        setSchedules(prev => prev.map(s => s.id === editingSchedule.id ? updated : s));
+      }
+      setEditingSchedule(null);
+    } else {
+      // Create new schedule
+      const newSchedule = await createSchedule(scheduleData);
+      if (newSchedule) {
+        setSchedules(prev => [...prev, newSchedule]);
+      }
     }
-    setTime('');
+    setHour('');
+    setMinute('');
     setSelectedDays([]);
     setSubmitting(false);
+  };
+
+  const handleEdit = (schedule: DbSchedule) => {
+    setEditingSchedule(schedule);
+    setDeviceUuid(schedule.device_uuid);
+    setAction(schedule.action);
+    setHour(schedule.time_hour);
+    setMinute(schedule.time_minute);
+    setSelectedDays(schedule.days_of_week || []);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSchedule(null);
+    setHour('');
+    setMinute('');
+    setSelectedDays([]);
+    if (devices.length > 0) {
+      setDeviceUuid(devices[0].device_uuid);
+      setAction(isBotType(devices[0].device_type) ? 'scenario0' : 'lock');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -146,7 +191,7 @@ const Schedule: React.FC = () => {
                   setDeviceUuid(e.target.value);
                   const dev = devices.find(d => d.device_uuid === e.target.value);
                   if (dev) {
-                    setAction(isBotType(dev.device_type) ? 'scenario1' : 'lock');
+                    setAction(isBotType(dev.device_type) ? 'scenario0' : 'lock');
                   }
                 }}
                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
@@ -167,8 +212,8 @@ const Schedule: React.FC = () => {
                 >
                   {selectedDevice && isBotType(selectedDevice.device_type) ? (
                     <>
-                      <option value="scenario1">Scenario 1 ({selectedDevice.scenario1_name || 'Off'})</option>
-                      <option value="scenario2">Scenario 2 ({selectedDevice.scenario2_name || 'On'})</option>
+                      <option value="scenario0">Scenario 0 ({selectedDevice.scenario0_name || 'Off'})</option>
+                      <option value="scenario1">Scenario 1 ({selectedDevice.scenario1_name || 'On'})</option>
                     </>
                   ) : selectedDevice && isLockType(selectedDevice.device_type) ? (
                     <>
@@ -182,13 +227,31 @@ const Schedule: React.FC = () => {
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Time</label>
-                <input
-                  type="time"
-                  required
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                />
+                <div className="flex gap-2 items-center">
+                  <select
+                    required
+                    value={hour}
+                    onChange={(e) => setHour(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                  >
+                    <option value="">--</option>
+                    {HOUR_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <span className="text-gray-400 font-bold">:</span>
+                  <select
+                    required
+                    value={minute}
+                    onChange={(e) => setMinute(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                  >
+                    <option value="">--</option>
+                    {MINUTE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -237,10 +300,22 @@ const Schedule: React.FC = () => {
               </p>
             </div>
 
-            <Button type="submit" variant="secondary" className="w-full gap-2 mt-2" disabled={!time || submitting} isLoading={submitting}>
-              <IconPlus className="w-4 h-4" />
-              <span>Set Timer</span>
-            </Button>
+            {editingSchedule ? (
+              <div className="flex gap-2 mt-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={handleCancelEdit}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" className="flex-1 gap-2" disabled={hour === '' || minute === '' || submitting} isLoading={submitting}>
+                  <IconPencil className="w-4 h-4" />
+                  <span>Update</span>
+                </Button>
+              </div>
+            ) : (
+              <Button type="submit" variant="secondary" className="w-full gap-2 mt-2" disabled={hour === '' || minute === '' || submitting} isLoading={submitting}>
+                <IconPlus className="w-4 h-4" />
+                <span>Set Timer</span>
+              </Button>
+            )}
           </form>
         </div>
 
@@ -254,7 +329,7 @@ const Schedule: React.FC = () => {
             </div>
           ) : (
             schedules.filter(s => s.enabled).map(schedule => (
-              <div key={schedule.id} className="flex items-center justify-between p-4 bg-surface rounded-lg border border-border shadow-sm group">
+              <div key={schedule.id} className={`flex items-center justify-between p-4 bg-surface rounded-lg border shadow-sm group ${editingSchedule?.id === schedule.id ? 'border-primary' : 'border-border'}`}>
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-8 rounded-full bg-accent/20 text-primary flex items-center justify-center text-xs font-bold">
                     {formatTime(schedule.time_hour, schedule.time_minute)}
@@ -264,12 +339,20 @@ const Schedule: React.FC = () => {
                     <span className="text-[10px] text-gray-400">{formatDays(schedule.days_of_week)}</span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(schedule.id)}
-                  className="text-gray-300 hover:text-red-500 transition-colors p-2"
-                >
-                  <IconTrash className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleEdit(schedule)}
+                    className="text-gray-300 hover:text-primary transition-colors p-2"
+                  >
+                    <IconPencil className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(schedule.id)}
+                    className="text-gray-300 hover:text-red-500 transition-colors p-2"
+                  >
+                    <IconTrash className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))
           )}
