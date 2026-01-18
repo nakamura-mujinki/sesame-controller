@@ -9,7 +9,7 @@ const Logs: React.FC = () => {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      const data = await getLogs();
+      const data = await getLogs(50);
       setLogs(data);
       setLoading(false);
     };
@@ -19,8 +19,8 @@ const Logs: React.FC = () => {
   const formatDateTime = (dateStr: string) => {
     const date = new Date(dateStr);
     return {
-      date: date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' }),
-      time: date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      date: date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }),
+      time: date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
     };
   };
 
@@ -34,9 +34,11 @@ const Logs: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
-      <header className="px-6 py-4 bg-surface border-b border-border shrink-0">
-        <h1 className="text-xl font-semibold tracking-tight text-primary">Logs</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Recent activity</p>
+      <header className="px-6 py-3 bg-surface border-b border-border shrink-0">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold tracking-tight text-primary">Logs</h1>
+          <span className="text-[10px] text-gray-400">Last 50</span>
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto no-scrollbar scroll-container momentum-scroll">
@@ -49,19 +51,18 @@ const Logs: React.FC = () => {
           <ul className="divide-y divide-gray-100 bg-surface">
             {logs.map((log) => {
               const { date, time } = formatDateTime(log.created_at);
+              const isError = log.status === 'error';
               return (
-                <li key={log.id} className="px-6 py-4 flex flex-col gap-1">
-                  <div className="flex justify-between items-start">
-                    <span className={`text-sm font-medium ${
-                      log.status === 'error' ? 'text-red-500' : 'text-primary'
-                    }`}>
-                      {log.message || `${log.action} on ${log.device_type}`}
+                <li key={log.id} className="px-4 py-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isError ? 'bg-red-500' : 'bg-green-500'}`} />
+                    <span className={`text-xs truncate ${isError ? 'text-red-500' : 'text-gray-700'}`}>
+                      {log.message || `${log.action}`}
                     </span>
-                    <div className="text-right">
-                      <span className="text-[10px] text-gray-400 font-mono block">{time}</span>
-                      <span className="text-[9px] text-gray-300 font-mono">{date}</span>
-                    </div>
                   </div>
+                  <span className="text-[10px] text-gray-400 font-mono shrink-0">
+                    {date} {time}
+                  </span>
                 </li>
               );
             })}

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { DbDevice, DeviceType, DEVICE_IMAGES, DEVICE_NAMES } from '../services/supabase';
-import { getAllDevices, addDevice, toggleDeviceVisibility, updateScenarioNames } from '../services/deviceService';
+import { getAllDevices, addDevice, toggleDeviceVisibility, updateScenarioNames, updateDeviceSecretKey } from '../services/deviceService';
 import { getUserSettings, saveApiKey } from '../services/userSettingsService';
 import Button from '../components/Button';
-import { IconPlus } from '../components/Icons';
+import { IconPlus, IconPencil } from '../components/Icons';
 
 // All available device types for the selector
 const DEVICE_TYPE_OPTIONS: DeviceType[] = ['sesame5', 'sesame5_pro', 'bot2'];
@@ -43,9 +43,14 @@ const Settings: React.FC = () => {
 
   // Scenario editing state
   const [editingScenarioDevice, setEditingScenarioDevice] = useState<string | null>(null);
+  const [scenario0Name, setScenario0Name] = useState('');
   const [scenario1Name, setScenario1Name] = useState('');
-  const [scenario2Name, setScenario2Name] = useState('');
   const [savingScenario, setSavingScenario] = useState(false);
+
+  // Secret key editing state
+  const [editingSecretKeyDevice, setEditingSecretKeyDevice] = useState<string | null>(null);
+  const [newSecretKey, setNewSecretKey] = useState('');
+  const [savingSecretKey, setSavingSecretKey] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -117,29 +122,50 @@ const Settings: React.FC = () => {
 
   const startEditingScenario = (device: DbDevice) => {
     setEditingScenarioDevice(device.id);
-    setScenario1Name(device.scenario1_name || 'Off');
-    setScenario2Name(device.scenario2_name || 'On');
+    setScenario0Name(device.scenario0_name || 'Off');
+    setScenario1Name(device.scenario1_name || 'On');
   };
 
   const cancelEditingScenario = () => {
     setEditingScenarioDevice(null);
+    setScenario0Name('');
     setScenario1Name('');
-    setScenario2Name('');
   };
 
   const handleSaveScenarioNames = async (deviceId: string) => {
     setSavingScenario(true);
-    const success = await updateScenarioNames(deviceId, scenario1Name, scenario2Name);
+    const success = await updateScenarioNames(deviceId, scenario0Name, scenario1Name);
     if (success) {
       setDevices(prev =>
         prev.map(d => d.id === deviceId
-          ? { ...d, scenario1_name: scenario1Name, scenario2_name: scenario2Name }
+          ? { ...d, scenario0_name: scenario0Name, scenario1_name: scenario1Name }
           : d
         )
       );
       setEditingScenarioDevice(null);
     }
     setSavingScenario(false);
+  };
+
+  const startEditingSecretKey = (device: DbDevice) => {
+    setEditingSecretKeyDevice(device.id);
+    setNewSecretKey('');
+  };
+
+  const cancelEditingSecretKey = () => {
+    setEditingSecretKeyDevice(null);
+    setNewSecretKey('');
+  };
+
+  const handleSaveSecretKey = async (deviceId: string) => {
+    if (!newSecretKey.trim()) return;
+    setSavingSecretKey(true);
+    const success = await updateDeviceSecretKey(deviceId, newSecretKey.trim());
+    if (success) {
+      setEditingSecretKeyDevice(null);
+      setNewSecretKey('');
+    }
+    setSavingSecretKey(false);
   };
 
   // Separate visible and hidden devices
@@ -162,235 +188,22 @@ const Settings: React.FC = () => {
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar scroll-container momentum-scroll">
-        {/* Visible Device List */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-semibold text-gray-400">Active Devices</h3>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="text-[10px] text-primary hover:underline flex items-center gap-1"
-            >
-              <IconPlus className="w-3 h-3" />
-              Add Device
-            </button>
-          </div>
-
-          {visibleDevices.length === 0 ? (
-            <div className="text-center py-6 opacity-50">
-              <p className="text-xs text-gray-400">No active devices</p>
-            </div>
-          ) : (
-            visibleDevices.map(device => (
-              <div key={device.id} className="p-4 bg-surface rounded-lg border border-border shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-border">
-                      <img
-                        src={DEVICE_IMAGES[device.device_type] || DEVICE_IMAGES.sesame5}
-                        alt={DEVICE_NAMES[device.device_type] || device.device_type}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-primary">{device.name}</span>
-                      <span className="text-[10px] text-gray-400">{DEVICE_NAMES[device.device_type] || device.device_type}</span>
-                      <span className="text-[10px] text-gray-400 font-mono">{device.device_uuid.slice(0, 8)}...</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleToggleVisibility(device)}
-                    className="text-primary hover:text-gray-600 transition-colors p-2"
-                    title="Hide device"
-                  >
-                    <IconEye className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Scenario name editing for bot2 */}
-                {device.device_type === 'bot2' && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    {editingScenarioDevice === device.id ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <label className="text-[10px] text-gray-400 w-20">Scenario 1:</label>
-                          <input
-                            type="text"
-                            value={scenario1Name}
-                            onChange={(e) => setScenario1Name(e.target.value)}
-                            className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary outline-none"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <label className="text-[10px] text-gray-400 w-20">Scenario 2:</label>
-                          <input
-                            type="text"
-                            value={scenario2Name}
-                            onChange={(e) => setScenario2Name(e.target.value)}
-                            className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary outline-none"
-                          />
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            onClick={cancelEditingScenario}
-                            className="text-[10px] text-gray-500 hover:text-gray-700"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleSaveScenarioNames(device.id)}
-                            disabled={savingScenario}
-                            className="text-[10px] text-primary hover:underline"
-                          >
-                            {savingScenario ? 'Saving...' : 'Save'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="text-[10px] text-gray-500">
-                          <span className="text-gray-400">Scenarios:</span>{' '}
-                          {device.scenario1_name || 'Off'} / {device.scenario2_name || 'On'}
-                        </div>
-                        <button
-                          onClick={() => startEditingScenario(device)}
-                          className="text-[10px] text-primary hover:underline"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Hidden Device List */}
-        {hiddenDevices.length > 0 && (
-          <div className="space-y-3">
-            <button
-              onClick={() => setShowHidden(!showHidden)}
-              className="flex items-center gap-2 px-1 text-xs font-semibold text-gray-400 hover:text-gray-600"
-            >
-              <span>{showHidden ? '▼' : '▶'}</span>
-              <span>Hidden Devices ({hiddenDevices.length})</span>
-            </button>
-
-            {showHidden && (
-              <div className="space-y-2">
-                {hiddenDevices.map(device => (
-                  <div key={device.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 opacity-60">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 grayscale">
-                        <img
-                          src={DEVICE_IMAGES[device.device_type] || DEVICE_IMAGES.sesame5}
-                          alt={DEVICE_NAMES[device.device_type] || device.device_type}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-gray-500">{device.name}</span>
-                        <span className="text-[10px] text-gray-400">{DEVICE_NAMES[device.device_type] || device.device_type}</span>
-                        <span className="text-[10px] text-gray-400 font-mono">{device.device_uuid.slice(0, 8)}...</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleToggleVisibility(device)}
-                      className="text-gray-400 hover:text-primary transition-colors p-2"
-                      title="Show device"
-                    >
-                      <IconEyeSlash className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+        {/* Add Device Form (Top) */}
+        <div className="bg-surface p-5 rounded-lg border border-border shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-primary">Add Device</h3>
+            {!showForm && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="text-[10px] text-primary hover:underline flex items-center gap-1"
+              >
+                <IconPlus className="w-3 h-3" />
+                New
+              </button>
             )}
           </div>
-        )}
 
-        {/* SESAME API Key Section */}
-        <div className="bg-surface p-5 rounded-lg border border-border shadow-sm">
-          <h3 className="text-sm font-semibold text-primary mb-3">SESAME API Key</h3>
-          <p className="text-[11px] text-gray-500 mb-3">
-            デバイス操作に必要なAPI Keyを設定してください。
-            <a
-              href="https://biz.candyhouse.co/biz/developer"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline ml-1"
-            >
-              Developer Portal
-            </a>
-            で取得できます。
-          </p>
-
-          {hasApiKey ? (
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-700">
-                API Key is configured
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setHasApiKey(false)}
-                className="text-xs"
-              >
-                Change
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Enter your SESAME API Key"
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-              />
-              <Button
-                variant="primary"
-                onClick={handleSaveApiKey}
-                disabled={!apiKey.trim() || savingApiKey}
-                isLoading={savingApiKey}
-                className="w-full"
-              >
-                Save API Key
-              </Button>
-            </div>
-          )}
-
-          {apiKeyMessage && (
-            <p className={`text-xs mt-2 ${apiKeyMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-              {apiKeyMessage.text}
-            </p>
-          )}
-        </div>
-
-        {/* How to get UUID and Secret Key */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="text-xs font-semibold text-blue-800 mb-2">UUID / Secret Key の取得方法</h4>
-          <ol className="text-[11px] text-blue-700 space-y-1 list-decimal list-inside">
-            <li>
-              <a
-                href="https://biz.candyhouse.co/biz/developer"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-blue-900"
-              >
-                SESAME Developer Portal
-              </a>
-              {' '}にアクセス
-            </li>
-            <li>SESAME公式アプリと同じアカウントでログイン</li>
-            <li>「個人で登録済みのデバイス」から対象デバイスを選択</li>
-            <li>UUID と Secret Key をコピー</li>
-          </ol>
-        </div>
-
-        {/* Add Device Form */}
-        {showForm && (
-          <div className="bg-surface p-5 rounded-lg border border-border shadow-sm">
-            <h3 className="text-sm font-semibold text-primary mb-4">Add New Device</h3>
+          {showForm ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Device Name</label>
@@ -461,8 +274,265 @@ const Settings: React.FC = () => {
                 </Button>
               </div>
             </form>
+          ) : (
+            <p className="text-[11px] text-gray-400">Click "New" to register a new device.</p>
+          )}
+        </div>
+
+        {/* Active Device List */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold text-gray-400 px-1">Active Devices</h3>
+
+          {visibleDevices.length === 0 ? (
+            <div className="text-center py-6 opacity-50">
+              <p className="text-xs text-gray-400">No active devices</p>
+            </div>
+          ) : (
+            visibleDevices.map(device => (
+              <div key={device.id} className="p-4 bg-surface rounded-lg border border-border shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-border">
+                      <img
+                        src={DEVICE_IMAGES[device.device_type] || DEVICE_IMAGES.sesame5}
+                        alt={DEVICE_NAMES[device.device_type] || device.device_type}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-primary">{device.name}</span>
+                      <span className="text-[10px] text-gray-400">{DEVICE_NAMES[device.device_type] || device.device_type}</span>
+                      <span className="text-[10px] text-gray-400 font-mono">{device.device_uuid.slice(0, 8)}...</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleToggleVisibility(device)}
+                    className="text-primary hover:text-gray-600 transition-colors p-2"
+                    title="Hide device"
+                  >
+                    <IconEye className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Secret key editing */}
+                <div className="mt-3 pt-3 border-t border-border">
+                  {editingSecretKeyDevice === device.id ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] text-gray-400 w-20">Secret Key:</label>
+                        <input
+                          type="password"
+                          value={newSecretKey}
+                          onChange={(e) => setNewSecretKey(e.target.value)}
+                          placeholder="New secret key"
+                          className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs font-mono focus:ring-1 focus:ring-primary outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={cancelEditingSecretKey}
+                          className="text-[10px] text-gray-500 hover:text-gray-700"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleSaveSecretKey(device.id)}
+                          disabled={!newSecretKey.trim() || savingSecretKey}
+                          className="text-[10px] text-primary hover:underline disabled:opacity-50"
+                        >
+                          {savingSecretKey ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] text-gray-500">
+                        <span className="text-gray-400">Secret Key:</span>{' '}
+                        <span className="font-mono">••••••••</span>
+                      </div>
+                      <button
+                        onClick={() => startEditingSecretKey(device)}
+                        className="text-[10px] text-primary hover:underline flex items-center gap-1"
+                      >
+                        <IconPencil className="w-3 h-3" />
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Scenario name editing for bot2 */}
+                {device.device_type === 'bot2' && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    {editingScenarioDevice === device.id ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] text-gray-400 w-20">Scenario 0:</label>
+                          <input
+                            type="text"
+                            value={scenario0Name}
+                            onChange={(e) => setScenario0Name(e.target.value)}
+                            className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] text-gray-400 w-20">Scenario 1:</label>
+                          <input
+                            type="text"
+                            value={scenario1Name}
+                            onChange={(e) => setScenario1Name(e.target.value)}
+                            className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={cancelEditingScenario}
+                            className="text-[10px] text-gray-500 hover:text-gray-700"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleSaveScenarioNames(device.id)}
+                            disabled={savingScenario}
+                            className="text-[10px] text-primary hover:underline"
+                          >
+                            {savingScenario ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="text-[10px] text-gray-500">
+                          <span className="text-gray-400">Scenarios:</span>{' '}
+                          {device.scenario0_name || 'Off'} / {device.scenario1_name || 'On'}
+                        </div>
+                        <button
+                          onClick={() => startEditingScenario(device)}
+                          className="text-[10px] text-primary hover:underline"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Hidden Device List */}
+        {hiddenDevices.length > 0 && (
+          <div className="space-y-3">
+            <button
+              onClick={() => setShowHidden(!showHidden)}
+              className="flex items-center gap-2 px-1 text-xs font-semibold text-gray-400 hover:text-gray-600"
+            >
+              <span>{showHidden ? '▼' : '▶'}</span>
+              <span>Hidden Devices ({hiddenDevices.length})</span>
+            </button>
+
+            {showHidden && (
+              <div className="space-y-2">
+                {hiddenDevices.map(device => (
+                  <div key={device.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 opacity-60">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 grayscale">
+                        <img
+                          src={DEVICE_IMAGES[device.device_type] || DEVICE_IMAGES.sesame5}
+                          alt={DEVICE_NAMES[device.device_type] || device.device_type}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-gray-500">{device.name}</span>
+                        <span className="text-[10px] text-gray-400">{DEVICE_NAMES[device.device_type] || device.device_type}</span>
+                        <span className="text-[10px] text-gray-400 font-mono">{device.device_uuid.slice(0, 8)}...</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleVisibility(device)}
+                      className="text-gray-400 hover:text-primary transition-colors p-2"
+                      title="Show device"
+                    >
+                      <IconEyeSlash className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
+
+        {/* SESAME API Key Section */}
+        <div className="bg-surface p-5 rounded-lg border border-border shadow-sm">
+          <h3 className="text-sm font-semibold text-primary mb-3">SESAME API Key</h3>
+          <p className="text-[11px] text-gray-500 mb-3">
+            Required for device operations.
+          </p>
+
+          {hasApiKey ? (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-700">
+                API Key is configured
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setHasApiKey(false)}
+                className="text-xs"
+              >
+                Change
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Enter your SESAME API Key"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-mono focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+              />
+              <Button
+                variant="primary"
+                onClick={handleSaveApiKey}
+                disabled={!apiKey.trim() || savingApiKey}
+                isLoading={savingApiKey}
+                className="w-full"
+              >
+                Save API Key
+              </Button>
+            </div>
+          )}
+
+          {apiKeyMessage && (
+            <p className={`text-xs mt-2 ${apiKeyMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+              {apiKeyMessage.text}
+            </p>
+          )}
+        </div>
+
+        {/* How to get UUID and Secret Key */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="text-xs font-semibold text-blue-800 mb-2">UUID / Secret Key / API Key の取得方法</h4>
+          <ol className="text-[11px] text-blue-700 space-y-1 list-decimal list-inside">
+            <li>
+              <a
+                href="https://biz.candyhouse.co/biz/developer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-blue-900"
+              >
+                SESAME Developer Portal
+              </a>
+              {' '}にアクセス
+            </li>
+            <li>SESAME公式アプリと同じアカウントでログイン</li>
+            <li>「個人で登録済みのデバイス」から対象デバイスを選択</li>
+            <li>UUID と Secret Key をコピー</li>
+            <li>API Key はページ上部に表示されています</li>
+          </ol>
+        </div>
       </main>
     </div>
   );

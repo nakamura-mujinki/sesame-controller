@@ -129,16 +129,33 @@ export const deleteDevice = async (id: string): Promise<boolean> => {
  */
 export const updateScenarioNames = async (
   id: string,
-  scenario1_name: string,
-  scenario2_name: string
+  scenario0_name: string,
+  scenario1_name: string
 ): Promise<boolean> => {
   const { error } = await supabase
     .from('devices')
-    .update({ scenario1_name, scenario2_name })
+    .update({ scenario0_name, scenario1_name })
     .eq('id', id);
 
   if (error) {
     console.error('Failed to update scenario names:', error);
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Update device secret key
+ */
+export const updateDeviceSecretKey = async (id: string, secret_key: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('devices')
+    .update({ secret_key })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Failed to update device secret key:', error);
     return false;
   }
 
