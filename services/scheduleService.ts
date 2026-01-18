@@ -72,3 +72,30 @@ export const toggleSchedule = async (id: string, enabled: boolean): Promise<bool
 
   return true;
 };
+
+export const updateSchedule = async (
+  id: string,
+  schedule: {
+    name: string;
+    device_type: DeviceType;
+    device_uuid: string;
+    action: string;
+    time_hour: number;
+    time_minute: number;
+    days_of_week: number[] | null;
+  }
+): Promise<DbSchedule | null> => {
+  const { data, error } = await supabase
+    .from('schedules')
+    .update(schedule)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update schedule:', error);
+    return null;
+  }
+
+  return data;
+};
