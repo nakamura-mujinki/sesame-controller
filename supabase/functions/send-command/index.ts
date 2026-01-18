@@ -1,67 +1,97 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { cbc } from "https://esm.sh/@noble/ciphers@1.0.0/aes";
 
 const SESAME_API_BASE = "https://app.candyhouse.co/api/sesame2";
 
-// AES-CMAC実装
-async function generateSign(secret: string, timestamp: number): Promise<string> {
+// AES-CMAC using @noble/ciphers
+function generateSign(secret: string, timestamp: number): string {
   const secretBytes = hexToBytes(secret);
-  const timestampBytes = new Uint8Array(4);
-  new DataView(timestampBytes.buffer).setUint32(0, timestamp, true);
 
-  const key = await crypto.subtle.importKey(
-    "raw",
-    secretBytes,
-    { name: "AES-CBC", length: 128 },
-    false,
-    ["encrypt"]
-  );
+  // タイムスタンプをリトルエンディアン4バイトにして、[1:4]を抽出（Pythonと同じ）
+  const fullTimestamp = new Uint8Array(4);
+  new DataView(fullTimestamp.buffer).setUint32(0, timestamp, true);
+  const message = fullTimestamp.slice(1, 4);  // 3バイトのみ使用
 
-  const zeroBlock = new Uint8Array(16);
-  const L = new Uint8Array(
-    await crypto.subtle.encrypt(
-      { name: "AES-CBC", iv: zeroBlock },
-      key,
-      zeroBlock
-    )
-  ).slice(0, 16);
-
-  const K1 = generateSubkey(L);
-
-  const padded = new Uint8Array(16);
-  padded.set(timestampBytes);
-  padded[4] = 0x80;
-
-  for (let i = 0; i < 16; i++) {
-    padded[i] ^= K1[i];
-  }
-
-  const cmac = new Uint8Array(
-    await crypto.subtle.encrypt(
-      { name: "AES-CBC", iv: zeroBlock },
-      key,
-      padded
-    )
-  ).slice(0, 16);
-
+  // AES-CMAC implementation
+  const cmac = aesCmac(secretBytes, message);
   return bytesToHex(cmac);
 }
 
+// AES-CMAC (RFC 4493) implementation
+function aesCmac(key: Uint8Array, message: Uint8Array): Uint8Array {
+  const zeroBlock = new Uint8Array(16);
+
+  // Step 1: Generate subkeys
+  const cipher = cbc(key, zeroBlock);
+  const L = cipher.encrypt(zeroBlock);
+  const K1 = generateSubkey(L);
+  const K2 = generateSubkey(K1);
+
+  // Step 2: Determine if message needs padding
+  const blockSize = 16;
+  const numBlocks = message.length === 0 ? 1 : Math.ceil(message.length / blockSize);
+  const lastBlockComplete = message.length > 0 && message.length % blockSize === 0;
+
+  // Step 3: Prepare the last block
+  const lastBlock = new Uint8Array(blockSize);
+  const lastBlockStart = (numBlocks - 1) * blockSize;
+  const lastBlockLen = message.length - lastBlockStart;
+
+  if (lastBlockComplete) {
+    // Complete block: XOR with K1
+    for (let i = 0; i < blockSize; i++) {
+      lastBlock[i] = message[lastBlockStart + i] ^ K1[i];
+    }
+  } else {
+    // Incomplete block: pad and XOR with K2
+    for (let i = 0; i < lastBlockLen; i++) {
+      lastBlock[i] = message[lastBlockStart + i];
+    }
+    lastBlock[lastBlockLen] = 0x80; // Padding
+    for (let i = 0; i < blockSize; i++) {
+      lastBlock[i] ^= K2[i];
+    }
+  }
+
+  // Step 4: CBC-MAC
+  let X = new Uint8Array(blockSize);
+
+  // Process all blocks except the last one
+  for (let i = 0; i < numBlocks - 1; i++) {
+    const block = message.slice(i * blockSize, (i + 1) * blockSize);
+    const Y = new Uint8Array(blockSize);
+    for (let j = 0; j < blockSize; j++) {
+      Y[j] = X[j] ^ block[j];
+    }
+    const encCipher = cbc(key, zeroBlock);
+    X = encCipher.encrypt(Y).slice(0, blockSize);
+  }
+
+  // Process the last block
+  const Y = new Uint8Array(blockSize);
+  for (let j = 0; j < blockSize; j++) {
+    Y[j] = X[j] ^ lastBlock[j];
+  }
+  const finalCipher = cbc(key, zeroBlock);
+  return finalCipher.encrypt(Y).slice(0, blockSize);
+}
+
 function generateSubkey(L: Uint8Array): Uint8Array {
-  const K1 = new Uint8Array(16);
+  const K = new Uint8Array(16);
   let carry = 0;
 
   for (let i = 15; i >= 0; i--) {
     const tmp = (L[i] << 1) | carry;
-    K1[i] = tmp & 0xff;
+    K[i] = tmp & 0xff;
     carry = (L[i] & 0x80) ? 1 : 0;
   }
 
   if (L[0] & 0x80) {
-    K1[15] ^= 0x87;
+    K[15] ^= 0x87;
   }
 
-  return K1;
+  return K;
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -166,10 +196,10 @@ Deno.serve(async (req: Request) => {
 
     let cmd: number;
     if (isBotType) {
-      // シナリオ1 = cmd 2, シナリオ2 = cmd 3
-      if (action === "scenario1") cmd = 2;
-      else if (action === "scenario2") cmd = 3;
-      else cmd = 1; // click
+      // Bot2: scenario0=82, scenario1=83
+      if (action === "scenario0") cmd = 82;
+      else if (action === "scenario1") cmd = 83;
+      else cmd = 82;
     } else {
       // Lock types
       if (action === "lock") cmd = 82;
@@ -181,23 +211,47 @@ Deno.serve(async (req: Request) => {
     const timestamp = Math.floor(Date.now() / 1000);
     const sign = await generateSign(device.secret_key, timestamp);
 
+    // Bot2はhistoryにシナリオ番号を入れる
+    let historyLabel: string;
+    if (isBotType) {
+      if (action === "scenario0") historyLabel = "0";
+      else if (action === "scenario1") historyLabel = "1";
+      else historyLabel = "0";
+    } else {
+      historyLabel = "App";
+    }
+
+    const requestBody = {
+      cmd,
+      history: btoa(historyLabel),
+      sign,
+    };
+
+    console.log("SESAME API Request:", {
+      url: `${SESAME_API_BASE}/${device_uuid}/cmd`,
+      cmd,
+      action,
+      timestamp,
+      secretKeyLength: device.secret_key?.length,
+      sign,
+    });
+
     const response = await fetch(`${SESAME_API_BASE}/${device_uuid}/cmd`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": sesameApiKey,
       },
-      body: JSON.stringify({
-        cmd,
-        history: btoa("App"),
-        sign,
-      }),
+      body: JSON.stringify(requestBody),
     });
+
+    const responseText = await response.text();
+    console.log("SESAME API Response:", response.status, responseText);
 
     const success = response.ok;
     const message = success
       ? "Command executed successfully"
-      : `API Error: ${response.status}`;
+      : `API Error: ${response.status} - ${responseText}`;
 
     // ログ記録
     await supabaseService.from("operation_logs").insert({
@@ -210,7 +264,19 @@ Deno.serve(async (req: Request) => {
     });
 
     return new Response(
-      JSON.stringify({ success, message }),
+      JSON.stringify({
+        success,
+        message,
+        debug: {
+          cmd,
+          action,
+          sesameApiStatus: response.status,
+          sesameApiResponse: responseText,
+          secretKeyLength: device.secret_key?.length,
+          sign,
+          timestamp,
+        }
+      }),
       {
         headers: {
           "Content-Type": "application/json",
