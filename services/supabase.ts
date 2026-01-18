@@ -37,8 +37,8 @@ export interface DbDevice {
   device_uuid: string;
   secret_key: string;
   visible: boolean;
+  scenario0_name: string | null;
   scenario1_name: string | null;
-  scenario2_name: string | null;
   created_at: string;
 }
 

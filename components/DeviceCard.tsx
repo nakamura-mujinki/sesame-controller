@@ -41,8 +41,8 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
   const showLockControls = isLockType(device.device_type);
 
   // Use custom scenario names if available, fallback to defaults
-  const scenario1Label = device.scenario1_name || 'Off';
-  const scenario2Label = device.scenario2_name || 'On';
+  const scenario0Label = device.scenario0_name || 'Scenario 0';
+  const scenario1Label = device.scenario1_name || 'Scenario 1';
 
   return (
     <div className="bg-surface rounded-lg p-5 border border-border shadow-sm flex flex-col gap-5">
@@ -75,22 +75,22 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
         {showBotControls ? (
           <>
             <Button
-              variant="outline"
+              variant="primary"
               onClick={() => handleCommand('scenario1', scenario1Label)}
               isLoading={loadingAction === 'scenario1'}
               className="flex items-center gap-2"
             >
-              <IconMoon className="w-4 h-4" />
+              <IconLightBulb className="w-4 h-4" />
               <span>{scenario1Label}</span>
             </Button>
             <Button
-              variant="primary"
-              onClick={() => handleCommand('scenario2', scenario2Label)}
-              isLoading={loadingAction === 'scenario2'}
+              variant="outline"
+              onClick={() => handleCommand('scenario0', scenario0Label)}
+              isLoading={loadingAction === 'scenario0'}
               className="flex items-center gap-2"
             >
-              <IconLightBulb className="w-4 h-4" />
-              <span>{scenario2Label}</span>
+              <IconMoon className="w-4 h-4" />
+              <span>{scenario0Label}</span>
             </Button>
           </>
         ) : showLockControls ? (
