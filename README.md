@@ -4,6 +4,16 @@ SESAME Web API を使用したスマートロック・スマートホーム制�
 
 React + Vite + TypeScript + Supabase で構築。PWA対応。
 
+## スクリーンショット
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/796ef4a0-fbc6-4b8e-b4ce-255dfe0017ce" width="180" />
+  <img src="https://github.com/user-attachments/assets/7d321975-0b0a-42d2-822b-46c710cdde15" width="180" />
+  <img src="https://github.com/user-attachments/assets/58b2ae98-a0cc-46ed-8b6d-0ae5942ec24c" width="180" />
+  <img src="https://github.com/user-attachments/assets/692ba0ff-8095-4c63-a24a-694160922530" width="180" />
+  <img src="https://github.com/user-attachments/assets/dde575c9-c511-4050-9c8d-847985aaf744" width="180" />
+</p>
+
 ## 対応デバイス
 
 - **SESAME 5 / SESAME 5 Pro** - スマートロック（施錠・解錠）
