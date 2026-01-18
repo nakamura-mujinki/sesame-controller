@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://coawkrogiuekmjsnrtln.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvYXdrcm9naXVla21qc25ydGxuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2NTA3OTksImV4cCI6MjA4NDIyNjc5OX0.retIjMygGdJtXzt8OxZzv93qZBC2rVDG-WwAIK02X0Y';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -14,11 +18,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Device types (limited to supported devices)
 export type DeviceType = 'sesame5' | 'sesame5_pro' | 'bot2';
 
-// Device images mapping
+// Device images mapping (using Supabase Storage public URLs)
+const storageUrl = `${SUPABASE_URL}/storage/v1/object/public/assets`;
 export const DEVICE_IMAGES: Record<DeviceType, string> = {
-  sesame5: 'https://coawkrogiuekmjsnrtln.supabase.co/storage/v1/object/public/assets/sesame5.jpg',
-  sesame5_pro: 'https://coawkrogiuekmjsnrtln.supabase.co/storage/v1/object/public/assets/SSM5_pro_Right.jpg',
-  bot2: 'https://coawkrogiuekmjsnrtln.supabase.co/storage/v1/object/public/assets/bot2_front_2.jpg',
+  sesame5: `${storageUrl}/sesame5.jpg`,
+  sesame5_pro: `${storageUrl}/SSM5_pro_Right.jpg`,
+  bot2: `${storageUrl}/bot2_front_2.jpg`,
 };
 
 // Device display names

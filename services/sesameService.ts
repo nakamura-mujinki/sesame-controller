@@ -1,6 +1,6 @@
 import { supabase, DbDevice } from './supabase';
 
-const EDGE_FUNCTION_URL = 'https://coawkrogiuekmjsnrtln.supabase.co/functions/v1/send-command';
+const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-command`;
 
 export type ActionType = 'scenario0' | 'scenario1' | 'lock' | 'unlock';
 
